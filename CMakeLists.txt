@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 2.8)
+
+PROJECT (ITK_Project)
+FIND_PACKAGE(ITK REQUIRED)
+IF (ITK_FOUND)
+	INCLUDE (${ITK_USE_FILE})
+ELSE (ITK_FOUND)
+	MESSAGE("Brak ITK")
+ENDIF( ITK_FOUND)
+
+ADD_EXECUTABLE(EyeballsSegmentation
+	main.cxx
+)
+
+TARGET_LINK_LIBRARIES (EyeballsSegmentation
+	${ITK_LIBRARIES}
+)

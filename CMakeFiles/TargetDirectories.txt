@@ -1,0 +1,3 @@
+C:/POMwJO/ITK-projekt/CMakeFiles/EyeballsSegmentation.dir
+C:/POMwJO/ITK-projekt/CMakeFiles/ALL_BUILD.dir
+C:/POMwJO/ITK-projekt/CMakeFiles/ZERO_CHECK.dir
