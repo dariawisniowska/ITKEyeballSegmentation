@@ -4,6 +4,10 @@
 
 # Visual C++ cache files
 ipch/
+.pdb
+.iik
+.db-shm
+.db-wal
 *.aps
 *.ncb
 *.opendb
@@ -50,3 +54,6 @@ ipch/
 *.exe
 *.out
 *.app
+
+#Other
+/Images
