@@ -1,6 +1,9 @@
 
 #include<iostream> // std::cout, std::cin
 #include<string> // std::string
+#include <windows.h>
+#include <stdio.h>
+
 #include<itkImageFileReader.h>
 #include<itkImageFileWriter.h>
 #include<itkImageSeriesReader.h>
@@ -18,173 +21,192 @@
 #include<itkGDCMSeriesFileNames.h>
 #include<itkNumericSeriesFileNames.h>
 
-int main()
-{
-	/*Pixel Types*/
-	typedef unsigned char PixelType;
-	typedef float AccumulatorPixelType;
-	typedef float RadiusPixelType;
-	typedef signed short PixelType3D;
+#include "itkMeanImageFilter.h"
+#include "itkGradientAnisotropicDiffusionImageFilter.h"
+#include "itkMinMaxCurvatureFlowImageFilter.h"
+#include "itkBinaryErodeImageFilter.h"
+#include "itkBinaryDilateImageFilter.h"
+#include "itkBinaryBallStructuringElement.h"
+#include "itkLaplacianImageFilter.h"
 
-	/*Dimensions*/
-	const unsigned int Dimension = 2;
-	const int Dimension3D = 3;
+#include "itkSliceBySliceImageFilter.h"
 
-	/*Image Types*/
-	typedef itk::Image< PixelType, Dimension > ImageType;
-	typedef itk::Image<PixelType3D, Dimension3D> ImageType3D;
-	typedef itk::Image< AccumulatorPixelType, Dimension > AccumulatorImageType;
+std::string path = "Images/Input/Gsp9_Gsp9/Head_Routine - 20091228/";
 
-	/*Hough Transform Consts*/
-	constexpr int numberOfCircles = 2;
-	constexpr int radiusMin = 15;
-	constexpr int radiusMax = 30;
-	constexpr int sweepAngle = 0;
-	constexpr int sigmaGradient = 1;
-	constexpr int varianceOfAccumulatorBlurring = 5;
-	constexpr int radiusOfTheDiskToRemoveFromTheAccumulator = 10;
-	ImageType::IndexType localIndex;
 
-	/*Paths*/
-	char* inputFileName = "Images/Input/Gsp12_Gsp12/Head_Routine - 20090514/T1_SE_TRA_PAT2_FIL_4/IM-0002-0004.dcm";
-	char* outputFileName = "Images/Output/IM-0002-0004-C.dcm";
-	char* inputSeriesPath = "Images/Input/Gsp12_Gsp12/Head_Routine - 20090514/T1_SE_TRA_PAT2_FIL_4/";
-	char* outputSeriesNames = "Images/Output/ReadSeries/IMG%05d.dcm";
+/*Pixel Types*/
+typedef float PixelType;
+typedef float AccumulatorPixelType;
+typedef float RadiusPixelType;
+typedef float PixelType3D;
+typedef float OutputPixelType;
 
-	//////////////////////////////////////////2D////////////////////////////////////////////
-	////ODCZYTYWANIE OBRAZU
-	//typedef itk::ImageFileReader< ImageType > ReaderType;
-	//ReaderType::Pointer reader = ReaderType::New();
-	//reader->SetFileName(inputFileName);
-	//try
-	//{
-	//	reader->Update();
-	//	std::cout << "Read Image";
-	//}
-	//catch (itk::ExceptionObject & excep)
-	//{
-	//	std::cerr << "Exception caught !" << std::endl;
-	//	std::cerr << excep << std::endl;
-	//	return EXIT_FAILURE;
-	//}
-	//ImageType::Pointer localImage = reader->GetOutput();
+/*Dimensions*/
+const unsigned int Dimension = 2;
+const int Dimension3D = 3;
 
-	////TRANSFORMATA HOUGHA
+/*Image Types*/
+typedef itk::Image <PixelType, Dimension > ImageType;
+typedef itk::Image <PixelType3D, Dimension3D> ImageType3D;
+typedef itk::Image <PixelType3D, Dimension3D> OutImageType3D;
+typedef itk::Image <AccumulatorPixelType, Dimension > AccumulatorImageType;
+typedef itk::Image <OutputPixelType, Dimension > OutputImageType;
+
+/*Hough Transform Consts*/
+constexpr int numberOfCircles = 5;
+constexpr float radiusMin = 2.1;
+constexpr float radiusMax = 22.4;
+constexpr float radiusAvg = 16.2;
+constexpr float sweepAngle = 0;
+constexpr float sigmaGradient = 1.2;
+constexpr float varianceOfAccumulatorBlurring = 10;
+constexpr float radiusOfTheDiskToRemoveFromTheAccumulator = 1.1;
+constexpr float threshold = 2.3;
+ImageType::IndexType localIndex;
+
+/*Defs*/
+typedef itk::HoughTransform2DCirclesImageFilter<PixelType, AccumulatorPixelType> HoughTransformFilterType;
+
+HoughTransformFilterType::CirclesListType HoughTransform(ImageType::Pointer image) {
+
+	HoughTransformFilterType::CirclesListType circles;
+
+	typedef itk::CastImageFilter< ImageType, AccumulatorImageType >
+		CastingFilterType;
+	CastingFilterType::Pointer caster = CastingFilterType::New();
+	//std::cout << "Applying gradient magnitude filter" << std::endl;
+	typedef itk::GradientMagnitudeImageFilter<AccumulatorImageType,
+		AccumulatorImageType > GradientFilterType;
+	GradientFilterType::Pointer gradFilter = GradientFilterType::New();
+	caster->SetInput(image);
+	gradFilter->SetInput(caster->GetOutput());
+	gradFilter->Update();
+
+	//TRANSFORMATA HOUGHA
 	//std::cout << "Computing Hough Transform" << std::endl;
 
-	//typedef itk::HoughTransform2DCirclesImageFilter<PixelType,
-	//	AccumulatorPixelType> HoughTransformFilterType;
-	//HoughTransformFilterType::Pointer houghFilter
-	//	= HoughTransformFilterType::New();
+	HoughTransformFilterType::Pointer houghFilter
+		= HoughTransformFilterType::New();
 
-	//houghFilter->SetInput(reader->GetOutput());
-	//houghFilter->SetNumberOfCircles(numberOfCircles);
-	//houghFilter->SetMinimumRadius(radiusMin);
-	//houghFilter->SetMaximumRadius(radiusMax);
-	//houghFilter->SetSweepAngle(sweepAngle);
-	//houghFilter->SetSigmaGradient(sigmaGradient);
-	//houghFilter->SetVariance(varianceOfAccumulatorBlurring);	
-	//houghFilter->SetDiscRadiusRatio(radiusOfTheDiskToRemoveFromTheAccumulator);
-	//houghFilter->Update();
-	//AccumulatorImageType::Pointer localAccumulator = houghFilter->GetOutput();
+	houghFilter->SetInput(gradFilter->GetOutput());
+	houghFilter->SetNumberOfCircles(numberOfCircles);
+	houghFilter->SetMinimumRadius(radiusMin);
+	houghFilter->SetRadius(radiusAvg);
+	houghFilter->SetMaximumRadius(radiusMax);
+	houghFilter->SetSweepAngle(sweepAngle);
+	houghFilter->SetSigmaGradient(sigmaGradient);
+	houghFilter->SetVariance(varianceOfAccumulatorBlurring);
+	houghFilter->SetDiscRadiusRatio(radiusOfTheDiskToRemoveFromTheAccumulator);
+	houghFilter->SetThreshold(threshold);
+	houghFilter->Update();
+	AccumulatorImageType::Pointer localAccumulator = houghFilter->GetOutput();
 
-	//HoughTransformFilterType::CirclesListType circles;
-	//circles = houghFilter->GetCircles();
+	circles = houghFilter->GetCircles();
 	//std::cout << "Found " << circles.size() << " circle(s)." << std::endl;
-	//std::cout << "- - - - - - - - - - - - - - ";
-	//typedef unsigned char OutputPixelType;
-	//typedef itk::Image< OutputPixelType, Dimension > OutputImageType;
+	//std::cout << "- - - - - - - - - - - - - - \n";
 
-	//OutputImageType::Pointer localOutputImage = localImage;
-	//OutputImageType::RegionType region;
-	//region.SetSize(localImage->GetLargestPossibleRegion().GetSize());
-	//region.SetIndex(localImage->GetLargestPossibleRegion().GetIndex());
-	//localOutputImage->SetRegions(region);
-	//localOutputImage->SetOrigin(localImage->GetOrigin());
-	//localOutputImage->SetSpacing(localImage->GetSpacing());
-	//localOutputImage->Allocate(true); 
+	return circles;
+}
 
-	//typedef HoughTransformFilterType::CirclesListType CirclesListType;
-	//CirclesListType::const_iterator itCircles = circles.begin();
-	//while (itCircles != circles.end())
-	//{
-	//	std::cout << "\n_____Circle_____\n";
-	//	std::cout << "Center: ";
-	//	std::cout << (*itCircles)->GetObjectToParentTransform()->GetOffset()
-	//		<< std::endl;
-	//	std::cout << "Radius: " << (*itCircles)->GetRadius()[0] << std::endl;
-	//	std::cout << "\n________________\n";
-	//	for (double angle = 0;
-	//		angle <= itk::Math::twopi;
-	//		angle += itk::Math::pi / 60.0)
-	//	{
-	//		typedef HoughTransformFilterType::CircleType::TransformType
-	//			TransformType;
-	//		typedef TransformType::OutputVectorType
-	//			OffsetType;
-	//		const OffsetType offset =
-	//			(*itCircles)->GetObjectToParentTransform()->GetOffset();
-	//		localIndex[0] =
-	//			itk::Math::Round<long int>(offset[0]
-	//				+ (*itCircles)->GetRadius()[0] * std::cos(angle));
-	//		localIndex[1] =
-	//			itk::Math::Round<long int>(offset[1]
-	//				+ (*itCircles)->GetRadius()[0] * std::sin(angle));
-	//		OutputImageType::RegionType outputRegion =
-	//			localOutputImage->GetLargestPossibleRegion();
-	//		if (outputRegion.IsInside(localIndex))
-	//		{
-	//			localOutputImage->SetPixel(localIndex, 255);
-	//		}
-	//	}
-	//	itCircles++;
-	//}
-	////ZAPISYWANIE OBRAZU
-	//typedef itk::ImageFileWriter< ImageType > WriterType;
-	//WriterType::Pointer writer = WriterType::New();
-	//writer->SetFileName(outputFileName);
-	//writer->SetInput(localOutputImage);
-	////////////////////////////////////////////////////////////////////////////////////
-
-	////////////////////////////////////////3D//////////////////////////////////////////
-	//ODCZYTANIE SERII
-	typedef itk::ImageSeriesReader<ImageType3D> ReaderType3D;
-	ReaderType3D::Pointer reader = ReaderType3D::New();
-
+int main()
+{
+	std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg md\\Head_Neck_Standard - 1\\t1_vibe_fs_hi_res_20";
 	itk::GDCMSeriesFileNames::Pointer namesGenerator;
 	namesGenerator = itk::GDCMSeriesFileNames::New();
-	namesGenerator->SetDirectory(inputSeriesPath);
+	namesGenerator->SetDirectory(directory);
 	itk::SerieUIDContainer series = namesGenerator->GetSeriesUIDs();
-
-	reader->SetFileNames(namesGenerator->GetFileNames(series[0]));
-	reader->Update();
-	ImageType3D::Pointer image3D = reader->GetOutput();
-
-	//ZAPISYWANIE SERII
-	typedef itk::ImageSeriesWriter<ImageType3D, ImageType> SeriesWriterType;
-	SeriesWriterType::Pointer writer = SeriesWriterType::New();
-
-	itk::NumericSeriesFileNames::Pointer namesSeriesGenerator;
-	namesSeriesGenerator = itk::NumericSeriesFileNames::New();
-	namesSeriesGenerator->SetSeriesFormat(outputSeriesNames);
-	namesSeriesGenerator->SetStartIndex(1);
-	namesSeriesGenerator->SetEndIndex(
-		image3D->GetLargestPossibleRegion().GetSize()[2]);
-
-	writer->SetFileNames(namesSeriesGenerator->GetFileNames());
-	writer->SetInput(image3D);
-	///////////////////////////////////////////////////////////////////////////////////////
-
-	try
+	for (size_t i = 0; i < series.size(); i++)
 	{
-		writer->Update();
+		itk::FilenamesContainer filenames = namesGenerator->GetFileNames(series[i]);
+		itk::NumericSeriesFileNames::Pointer namesSeriesGenerator;
+		namesSeriesGenerator = itk::NumericSeriesFileNames::New();
+		namesSeriesGenerator->SetSeriesFormat("C:\\POMwJO\\ITK-projekt\\Images\\Output\\IMG%05d.dcm");
+		namesSeriesGenerator->SetStartIndex(1);
+		namesSeriesGenerator->SetEndIndex(filenames.size());
+		itk::FilenamesContainer outputFilenames = namesSeriesGenerator->GetFileNames();
+		for (size_t k = 0; k < filenames.size(); k++)
+		{
+			
+			typedef itk::ImageFileReader< ImageType > ReaderType;
+			ReaderType::Pointer reader = ReaderType::New();
+			reader->SetFileName(filenames[k]);
+			try
+			{
+				reader->Update();
+				std::cout << "- - - - - - - - - - - - - - \n";
+				std::cout << "Read Image: " << filenames[k] << std::endl;
+				std::cout << "- - - - - - - - - - - - - - \n";
+			}
+			catch (itk::ExceptionObject & excep)
+			{
+				std::cerr << "Exception caught !" << std::endl;
+				std::cerr << excep << std::endl;
+				return EXIT_FAILURE;
+			}
+			ImageType::Pointer localImage = reader->GetOutput();
+
+			OutputImageType::Pointer localOutputImage = localImage;
+			OutputImageType::RegionType region;
+			region.SetSize(localImage->GetLargestPossibleRegion().GetSize());
+			region.SetIndex(localImage->GetLargestPossibleRegion().GetIndex());
+			localOutputImage->SetRegions(region);
+			localOutputImage->SetOrigin(localImage->GetOrigin());
+			localOutputImage->SetSpacing(localImage->GetSpacing());
+			localOutputImage->Allocate(true);
+
+			HoughTransformFilterType::CirclesListType circles = HoughTransform(localImage);
+
+			typedef HoughTransformFilterType::CirclesListType CirclesListType;
+			CirclesListType::const_iterator itCircles = circles.begin();
+			while (itCircles != circles.end())
+			{
+				std::cout << "Center: " << (*itCircles)->GetObjectToParentTransform()->GetOffset() << std::endl;
+				std::cout << "Radius: " << (*itCircles)->GetRadius()[0] << std::endl;
+				for (double angle = 0;
+					angle <= itk::Math::twopi;
+					angle += itk::Math::pi / 60.0)
+				{
+					typedef HoughTransformFilterType::CircleType::TransformType
+						TransformType;
+					typedef TransformType::OutputVectorType
+						OffsetType;
+					const OffsetType offset =
+						(*itCircles)->GetObjectToParentTransform()->GetOffset();
+					localIndex[0] =
+						itk::Math::Round<long int>(offset[0]
+							+ (*itCircles)->GetRadius()[0] * std::cos(angle));
+					localIndex[1] =
+						itk::Math::Round<long int>(offset[1]
+							+ (*itCircles)->GetRadius()[0] * std::sin(angle));
+					OutputImageType::RegionType outputRegion =
+						localOutputImage->GetLargestPossibleRegion();
+					if (outputRegion.IsInside(localIndex))
+					{
+						localOutputImage->SetPixel(localIndex, 1024);
+					}
+				}
+				itCircles++;
+			}
+			//ZAPISYWANIE OBRAZU
+			typedef itk::ImageFileWriter< ImageType > WriterType;
+			WriterType::Pointer writer = WriterType::New();
+			writer->SetFileName(outputFilenames[k]);
+			writer->SetInput(localOutputImage);
+			try
+			{
+				writer->Update();
+			}
+			catch (itk::ExceptionObject & excep)
+			{
+				std::cerr << "Exception caught !" << std::endl;
+				std::cerr << excep << std::endl;
+				return EXIT_FAILURE;
+			}
+		}
 	}
-	catch (itk::ExceptionObject & excep)
-	{
-		std::cerr << "Exception caught !" << std::endl;
-		std::cerr << excep << std::endl;
-		return EXIT_FAILURE;
-	}
+	
+	
 
 	return EXIT_SUCCESS;
 }
+
