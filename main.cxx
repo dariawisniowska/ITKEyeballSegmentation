@@ -32,9 +32,6 @@
 #include "itkSliceBySliceImageFilter.h"
 #include "itkEllipseSpatialObject.h"
 
-std::string path = "Images/Input/Gsp9_Gsp9/Head_Routine - 20091228/";
-
-
 /*Pixel Types*/
 typedef float PixelType;
 typedef float AccumulatorPixelType;
@@ -106,8 +103,18 @@ HoughTransformFilterType::CirclesListType HoughTransform(ImageType::Pointer imag
 
 int main()
 {
+	char plaszczyna;
+	//P³aszczyzna czo³owa:
 	std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp13_Gsp13\\Head_Routine - 20090915\\T1_SE_TRA_PAT2_4";
+	plaszczyna = 'C';
+	//P³aszczyzna poprzeczna
+	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp8_Gsp8\\Head_Routine - 20090212\\T1_FL3D_COR_CM_24";
 	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg zb\\Head_Neck_Standard - 153275\\t1_vibe_fs_cor_CM_19";
+	//plaszczyna = 'P';
+	//P³aszczyzna strza³kowa
+	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg md\\Head_Neck_Standard - 1\\t1_tse_sag_2";
+	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg ok\\Head_Neck_Standard - 48865\\t1_tse_sag_2";
+	//plaszczyna = 'S';
 	itk::GDCMSeriesFileNames::Pointer namesGenerator;
 	namesGenerator = itk::GDCMSeriesFileNames::New();
 	namesGenerator->SetDirectory(directory);
@@ -118,7 +125,18 @@ int main()
 		itk::FilenamesContainer filenames = namesGenerator->GetFileNames(series[i]);
 		itk::NumericSeriesFileNames::Pointer namesSeriesGenerator;
 		namesSeriesGenerator = itk::NumericSeriesFileNames::New();
-		namesSeriesGenerator->SetSeriesFormat("C:\\POMwJO\\ITK-projekt\\Images\\Output\\IMG%05d.dcm");
+		switch (plaszczyna)
+		{
+		case 'C':
+			namesSeriesGenerator->SetSeriesFormat("C:\\POMwJO\\ITK-projekt\\Images\\Output\\Czolowa\\IMG%03d.dcm");
+			break;
+		case 'P':
+			namesSeriesGenerator->SetSeriesFormat("C:\\POMwJO\\ITK-projekt\\Images\\Output\\Poprzeczna\\IMG%03d.dcm");
+			break;
+		case 'S':
+			namesSeriesGenerator->SetSeriesFormat("C:\\POMwJO\\ITK-projekt\\Images\\Output\\Strzalkowa\\IMG%03d.dcm");
+			break;
+		}
 		namesSeriesGenerator->SetStartIndex(1);
 		namesSeriesGenerator->SetEndIndex(filenames.size());
 		itk::FilenamesContainer outputFilenames = namesSeriesGenerator->GetFileNames();
@@ -127,7 +145,7 @@ int main()
 		std::vector<HoughTransformFilterType::CirclesListType> savedCircles(filenames.size());
 		std::vector<HoughTransformFilterType::CirclesListType> finalCircles(filenames.size());
 
-
+		ImageType::Pointer localImage;
 		for (size_t k = 0; k < filenames.size(); k++)
 		{
 
@@ -147,7 +165,7 @@ int main()
 				std::cerr << excep << std::endl;
 				return EXIT_FAILURE;
 			}
-			ImageType::Pointer localImage = reader->GetOutput();
+			localImage = reader->GetOutput();
 
 			circles[k] = HoughTransform(localImage);
 			std::cout << "		Found " <<circles[k].size()<<" circles. "<< std::endl;
@@ -163,88 +181,106 @@ int main()
 			CirclesListType::const_iterator itCircles = circles[j].begin();
 			while (itCircles != circles[j].end())
 			{
-				if (j >= 2 && j < circles.size() - 2)
+				bool warunek;
+				switch (plaszczyna)
 				{
-					//pêtla po preprevious
-					bool preprevious = false;
-					size_t prog = 10;
-					CirclesListType::const_iterator itCirclesPrePrevious = circles[j - 2].begin();
-					while (itCirclesPrePrevious != circles[j - 2].end())
+				case 'C':
+					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2;
+					break;
+				case 'P':
+					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2;
+					break;
+				case 'S':
+					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] < localImage->GetLargestPossibleRegion().GetSize()[0] / 2;
+					break;
+				}
+				if(warunek)
+				{
+					if (j >= 2 && j < circles.size() - 2)
 					{
-						if ((((*itCircles)->GetObjectToParentTransform()->GetOffset()[0] >= (*itCirclesPrePrevious)->GetObjectToParentTransform()->GetOffset()[0] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <= (*itCirclesPrePrevious)->GetObjectToParentTransform()->GetOffset()[0] + prog)
-							&& ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] >= (*itCirclesPrePrevious)->GetObjectToParentTransform()->GetOffset()[1] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] <= (*itCirclesPrePrevious)->GetObjectToParentTransform()->GetOffset()[1] + prog)))
+						//pêtla po preprevious
+						bool preprevious = false;
+						size_t prog = 10;
+						CirclesListType::const_iterator itCirclesPrePrevious = circles[j - 2].begin();
+						while (itCirclesPrePrevious != circles[j - 2].end())
 						{
+							if ((((*itCircles)->GetObjectToParentTransform()->GetOffset()[0] >= (*itCirclesPrePrevious)->GetObjectToParentTransform()->GetOffset()[0] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <= (*itCirclesPrePrevious)->GetObjectToParentTransform()->GetOffset()[0] + prog)
+								&& ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] >= (*itCirclesPrePrevious)->GetObjectToParentTransform()->GetOffset()[1] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] <= (*itCirclesPrePrevious)->GetObjectToParentTransform()->GetOffset()[1] + prog)))
+							{
 
-							preprevious = true;
+								preprevious = true;
 
+							}
+							itCirclesPrePrevious++;
 						}
-						itCirclesPrePrevious++;
-					}
-					//pêtla po previous
-					bool previous = false;
-					CirclesListType::const_iterator itCirclesPrevious = circles[j - 1].begin();
-					while (itCirclesPrevious != circles[j - 1].end())
-					{
-						if ((((*itCircles)->GetObjectToParentTransform()->GetOffset()[0] >= (*itCirclesPrevious)->GetObjectToParentTransform()->GetOffset()[0] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <= (*itCirclesPrevious)->GetObjectToParentTransform()->GetOffset()[0] + prog)
-							&& ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] >= (*itCirclesPrevious)->GetObjectToParentTransform()->GetOffset()[1] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] <= (*itCirclesPrevious)->GetObjectToParentTransform()->GetOffset()[1] + prog)))
+						//pêtla po previous
+						bool previous = false;
+						CirclesListType::const_iterator itCirclesPrevious = circles[j - 1].begin();
+						while (itCirclesPrevious != circles[j - 1].end())
 						{
+							if ((((*itCircles)->GetObjectToParentTransform()->GetOffset()[0] >= (*itCirclesPrevious)->GetObjectToParentTransform()->GetOffset()[0] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <= (*itCirclesPrevious)->GetObjectToParentTransform()->GetOffset()[0] + prog)
+								&& ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] >= (*itCirclesPrevious)->GetObjectToParentTransform()->GetOffset()[1] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] <= (*itCirclesPrevious)->GetObjectToParentTransform()->GetOffset()[1] + prog)))
+							{
 
-							previous = true;
+								previous = true;
 
+							}
+							itCirclesPrevious++;
 						}
-						itCirclesPrevious++;
-					}
-					//pêtle po next
-					bool next = false;
-					CirclesListType::const_iterator itCirclesNext = circles[j + 1].begin();
-					while (itCirclesNext != circles[j + 1].end())
-					{
-						if ((((*itCircles)->GetObjectToParentTransform()->GetOffset()[0] >= (*itCirclesNext)->GetObjectToParentTransform()->GetOffset()[0] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <= (*itCirclesNext)->GetObjectToParentTransform()->GetOffset()[0] + prog)
-							&& ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] >= (*itCirclesNext)->GetObjectToParentTransform()->GetOffset()[1] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] <= (*itCirclesNext)->GetObjectToParentTransform()->GetOffset()[1] + prog)))
+						//pêtle po next
+						bool next = false;
+						CirclesListType::const_iterator itCirclesNext = circles[j + 1].begin();
+						while (itCirclesNext != circles[j + 1].end())
 						{
+							if ((((*itCircles)->GetObjectToParentTransform()->GetOffset()[0] >= (*itCirclesNext)->GetObjectToParentTransform()->GetOffset()[0] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <= (*itCirclesNext)->GetObjectToParentTransform()->GetOffset()[0] + prog)
+								&& ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] >= (*itCirclesNext)->GetObjectToParentTransform()->GetOffset()[1] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] <= (*itCirclesNext)->GetObjectToParentTransform()->GetOffset()[1] + prog)))
+							{
 
-							next = true;
+								next = true;
 
+							}
+							itCirclesNext++;
 						}
-						itCirclesNext++;
-					}
-					//pêtle po next
-					bool postnext = false;
-					CirclesListType::const_iterator itCirclesPostNext = circles[j + 2].begin();
-					while (itCirclesPostNext != circles[j + 2].end())
-					{
-						if ((((*itCircles)->GetObjectToParentTransform()->GetOffset()[0] >= (*itCirclesPostNext)->GetObjectToParentTransform()->GetOffset()[0] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <= (*itCirclesPostNext)->GetObjectToParentTransform()->GetOffset()[0] + prog)
-							&& ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] >= (*itCirclesPostNext)->GetObjectToParentTransform()->GetOffset()[1] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] <= (*itCirclesPostNext)->GetObjectToParentTransform()->GetOffset()[1] + prog)))
+						//pêtle po next
+						bool postnext = false;
+						CirclesListType::const_iterator itCirclesPostNext = circles[j + 2].begin();
+						while (itCirclesPostNext != circles[j + 2].end())
 						{
+							if ((((*itCircles)->GetObjectToParentTransform()->GetOffset()[0] >= (*itCirclesPostNext)->GetObjectToParentTransform()->GetOffset()[0] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <= (*itCirclesPostNext)->GetObjectToParentTransform()->GetOffset()[0] + prog)
+								&& ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] >= (*itCirclesPostNext)->GetObjectToParentTransform()->GetOffset()[1] - prog && (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] <= (*itCirclesPostNext)->GetObjectToParentTransform()->GetOffset()[1] + prog)))
+							{
 
-							postnext = true;
+								postnext = true;
 
+							}
+							itCirclesPostNext++;
 						}
-						itCirclesPostNext++;
-					}
-					//if to albo to true zostaje 
-					if (previous && next)
-					{
-						if (previous && preprevious)
+						//if to albo to true zostaje 
+						if (previous && next)
 						{
-							//std::cout << "saved" << std::endl;
-						}
-						else if (next && postnext)
-						{
-							//std::cout << "saved" << std::endl;
+							if (previous && preprevious)
+							{
+								//std::cout << "saved" << std::endl;
+							}
+							else if (next && postnext)
+							{
+								//std::cout << "saved" << std::endl;
+							}
+							else
+							{
+								//std::cout << "popped" << std::endl;
+								savedCircles[j].remove((*itCircles));
+							}
+
 						}
 						else
 						{
 							//std::cout << "popped" << std::endl;
 							savedCircles[j].remove((*itCircles));
 						}
-
 					}
 					else
-					{
-						//std::cout << "popped" << std::endl;
 						savedCircles[j].remove((*itCircles));
-					}
 				}
 				else
 					savedCircles[j].remove((*itCircles));
