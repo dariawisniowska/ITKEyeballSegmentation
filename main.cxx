@@ -105,12 +105,12 @@ int main()
 {
 	char plaszczyna;
 	//P³aszczyzna czo³owa:
-	std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp13_Gsp13\\Head_Routine - 20090915\\T1_SE_TRA_PAT2_4";
-	plaszczyna = 'C';
+	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp13_Gsp13\\Head_Routine - 20090915\\T1_SE_TRA_PAT2_4";
+	//plaszczyna = 'C';
 	//P³aszczyzna poprzeczna
-	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp8_Gsp8\\Head_Routine - 20090212\\T1_FL3D_COR_CM_24";
+	std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp8_Gsp8\\Head_Routine - 20090212\\T1_FL3D_COR_CM_24";
 	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg zb\\Head_Neck_Standard - 153275\\t1_vibe_fs_cor_CM_19";
-	//plaszczyna = 'P';
+	plaszczyna = 'P';
 	//P³aszczyzna strza³kowa
 	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg md\\Head_Neck_Standard - 1\\t1_tse_sag_2";
 	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg ok\\Head_Neck_Standard - 48865\\t1_tse_sag_2";
@@ -188,7 +188,7 @@ int main()
 					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2;
 					break;
 				case 'P':
-					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2;
+					warunek = ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2)&&((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] > localImage->GetLargestPossibleRegion().GetSize()[1] / 3);
 					break;
 				case 'S':
 					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] < localImage->GetLargestPossibleRegion().GetSize()[0] / 2;
