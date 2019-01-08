@@ -46,10 +46,13 @@ typedef itk::Image <AccumulatorPixelType, Dimension > AccumulatorImageType;
 typedef itk::Image <OutputPixelType, Dimension > OutputImageType;
 
 /*Hough Transform Consts*/
+float radiusMax_temp = 35/2;
+float radiusAvg_temp = 24/2;
+float spacing = 1;
 constexpr int numberOfCircles = 5;
-constexpr float radiusMin = 1.1; //mm
-constexpr float radiusMax = 22.1; //mm
-constexpr float radiusAvg = 16.2;
+constexpr float radiusMin = 2.1; 
+float radiusMax = 22.1; //potem nadpisywane po przeliczeniu _temp wed³ug spacing
+float radiusAvg = 16.2; 
 constexpr float sweepAngle = 0;
 constexpr float sigmaGradient = 1.2;
 constexpr float varianceOfAccumulatorBlurring = 10;
@@ -103,18 +106,20 @@ HoughTransformFilterType::CirclesListType HoughTransform(ImageType::Pointer imag
 
 int main()
 {
-	char plaszczyna;
-	//P³aszczyzna czo³owa:
-	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp13_Gsp13\\Head_Routine - 20090915\\T1_SE_TRA_PAT2_4";
-	//plaszczyna = 'C';
-	//P³aszczyzna poprzeczna
-	std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp8_Gsp8\\Head_Routine - 20090212\\T1_FL3D_COR_CM_24";
-	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg zb\\Head_Neck_Standard - 153275\\t1_vibe_fs_cor_CM_19";
-	plaszczyna = 'P';
-	//P³aszczyzna strza³kowa
-	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg md\\Head_Neck_Standard - 1\\t1_tse_sag_2";
-	//std::string directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg ok\\Head_Neck_Standard - 48865\\t1_tse_sag_2";
-	//plaszczyna = 'S';
+	char plaszczyna = 'S';
+	std::string directory;
+	switch (plaszczyna)
+	{
+	case 'C':
+		directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp8_Gsp8\\Head_Routine - 20090212\\T1_FL3D_COR_CM_24";
+		break;
+	case 'P':
+		directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp13_Gsp13\\Head_Routine - 20090915\\T1_SE_TRA_PAT2_4";
+		break;
+	case 'S':
+		directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg md\\Head_Neck_Standard - 1\\t1_tse_sag_2";
+		break;
+	}
 	itk::GDCMSeriesFileNames::Pointer namesGenerator;
 	namesGenerator = itk::GDCMSeriesFileNames::New();
 	namesGenerator->SetDirectory(directory);
@@ -166,7 +171,9 @@ int main()
 				return EXIT_FAILURE;
 			}
 			localImage = reader->GetOutput();
-
+			spacing = localImage->GetSpacing()[0];
+			radiusMax = radiusMax_temp / spacing ;
+			radiusAvg = radiusAvg_temp / spacing;
 			circles[k] = HoughTransform(localImage);
 			std::cout << "		Found " <<circles[k].size()<<" circles. "<< std::endl;
 		}
@@ -176,6 +183,7 @@ int main()
 		std::cout << "- - - - - - - - - - - - - - \n";
 		typedef HoughTransformFilterType::CirclesListType CirclesListType;
 		savedCircles = circles;
+		//finalCircles = savedCircles;
 		for (size_t j = 0; j < circles.size() ; j++)
 		{
 			CirclesListType::const_iterator itCircles = circles[j].begin();
@@ -185,10 +193,10 @@ int main()
 				switch (plaszczyna)
 				{
 				case 'C':
-					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2;
+					warunek = ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2) && ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] > localImage->GetLargestPossibleRegion().GetSize()[1] / 3);
 					break;
 				case 'P':
-					warunek = ((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2)&&((*itCircles)->GetObjectToParentTransform()->GetOffset()[1] > localImage->GetLargestPossibleRegion().GetSize()[1] / 3);
+					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[1] < localImage->GetLargestPossibleRegion().GetSize()[1] / 2;
 					break;
 				case 'S':
 					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] < localImage->GetLargestPossibleRegion().GetSize()[0] / 2;
@@ -373,10 +381,7 @@ int main()
 				return EXIT_FAILURE;
 			}
 		}
-
 	}
-
-	
 	
 
 	return EXIT_SUCCESS;
