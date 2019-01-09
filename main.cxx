@@ -57,7 +57,7 @@ constexpr float sweepAngle = 0;
 constexpr float sigmaGradient = 1.2;
 constexpr float varianceOfAccumulatorBlurring = 10;
 constexpr float radiusOfTheDiskToRemoveFromTheAccumulator = 1.1;
-constexpr float threshold = 2.3;
+constexpr float threshold = 6.3;
 ImageType::IndexType localIndex;
 
 /*Defs*/
@@ -125,6 +125,7 @@ int main()
 	namesGenerator->SetDirectory(directory);
 
 	itk::SerieUIDContainer series = namesGenerator->GetSeriesUIDs();
+	std::cout << "itk = [  ";
 	for (size_t i = 0; i < series.size(); i++)
 	{
 		itk::FilenamesContainer filenames = namesGenerator->GetFileNames(series[i]);
@@ -160,9 +161,9 @@ int main()
 			try
 			{
 				reader->Update();
-				std::cout << "- - - - - - - - - - - - - - \n";
-				std::cout << "Read Image: " << filenames[k] << std::endl;
-				std::cout << "- - - - - - - - - - - - - - \n";
+				//std::cout << "- - - - - - - - - - - - - - \n";
+				//std::cout << "Read Image: " << filenames[k] << std::endl;
+				//std::cout << "- - - - - - - - - - - - - - \n";
 			}
 			catch (itk::ExceptionObject & excep)
 			{
@@ -175,12 +176,12 @@ int main()
 			radiusMax = radiusMax_temp / spacing ;
 			radiusAvg = radiusAvg_temp / spacing;
 			circles[k] = HoughTransform(localImage);
-			std::cout << "		Found " <<circles[k].size()<<" circles. "<< std::endl;
+			//std::cout << "		Found " <<circles[k].size()<<" circles. "<< std::endl;
 		}
 	
-		std::cout << "- - - - - - - - - - - - - - \n";
-		std::cout << "Validation" << std::endl;
-		std::cout << "- - - - - - - - - - - - - - \n";
+		//std::cout << "- - - - - - - - - - - - - - \n";
+		//std::cout << "Validation" << std::endl;
+		//std::cout << "- - - - - - - - - - - - - - \n";
 		typedef HoughTransformFilterType::CirclesListType CirclesListType;
 		savedCircles = circles;
 		//finalCircles = savedCircles;
@@ -309,9 +310,9 @@ int main()
 			try
 			{
 				reader->Update();
-				std::cout << "- - - - - - - - - - - - - - \n";
+				/*std::cout << "- - - - - - - - - - - - - - \n";
 				std::cout << "Read Image: " << filenames[k] << std::endl;
-				std::cout << "- - - - - - - - - - - - - - \n";
+				std::cout << "- - - - - - - - - - - - - - \n";*/
 			}
 			catch (itk::ExceptionObject & excep)
 			{
@@ -331,7 +332,7 @@ int main()
 			localOutputImage->Allocate(true);
 			
 			circles[k] = finalCircles[k];
-			std::cout << "		Saved " << circles[k].size() << " circles. " << std::endl;
+			//std::cout << "		Saved " << circles[k].size() << " circles. " << std::endl;
 
 			typedef HoughTransformFilterType::CirclesListType CirclesListType;
 			CirclesListType::const_iterator itCircles = circles[k].begin();
@@ -339,6 +340,7 @@ int main()
 			{
 				//std::cout << "Center: " << (*itCircles)->GetObjectToParentTransform()->GetOffset() << std::endl;
 				//std::cout << "Radius: " << (*itCircles)->GetRadius()[0] << std::endl;
+				std::cout << (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] <<", "<<(*itCircles)->GetObjectToParentTransform()->GetOffset()[1]<<", " << (*itCircles)->GetRadius()[0];
 				for (double angle = 0;
 					angle <= itk::Math::twopi;
 					angle += itk::Math::pi / 60.0)
@@ -363,7 +365,17 @@ int main()
 					}
 				}
 				itCircles++;
+
+				if((itCircles != circles[k].end()))
+					std::cout << " , " ;
 			}
+
+			if (circles[k].size() == 0)
+				std::cout << " 0,0,0,0,0,0";
+
+			if(circles[k].size()==1)
+				std::cout << " ,0,0,0";
+			
 			//ZAPISYWANIE OBRAZU
 			typedef itk::ImageFileWriter< ImageType > WriterType;
 			WriterType::Pointer writer = WriterType::New();
@@ -372,7 +384,7 @@ int main()
 			try
 			{
 				writer->Update();
-				std::cout << "		Overwrited image" << std::endl;
+				//std::cout << "		Overwrited image" << std::endl;
 			}
 			catch (itk::ExceptionObject & excep)
 			{
@@ -380,7 +392,9 @@ int main()
 				std::cerr << excep << std::endl;
 				return EXIT_FAILURE;
 			}
+			std::cout << " ;" << std::endl;
 		}
+		std::cout << " ];" << std::endl;
 	}
 	
 
