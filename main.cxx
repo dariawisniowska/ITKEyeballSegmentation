@@ -31,6 +31,11 @@
 
 #include "itkSliceBySliceImageFilter.h"
 #include "itkEllipseSpatialObject.h"
+#include "itkSpatialObjectToImageStatisticsCalculator.h"
+#include "itkImage.h"
+#include "itkEllipseSpatialObject.h"
+#include "itkRandomImageSource.h"
+
 
 /*Pixel Types*/
 typedef float PixelType;
@@ -49,8 +54,8 @@ typedef itk::Image <OutputPixelType, Dimension > OutputImageType;
 float radiusMax_temp = 35/2;
 float radiusAvg_temp = 24/2;
 float spacing = 1;
-constexpr int numberOfCircles = 5;
-constexpr float radiusMin = 2.1; 
+constexpr int numberOfCircles = 4;
+constexpr float radiusMin = 6.8; 
 float radiusMax = 22.1; //potem nadpisywane po przeliczeniu _temp wed³ug spacing
 float radiusAvg = 16.2; 
 constexpr float sweepAngle = 0;
@@ -70,11 +75,11 @@ HoughTransformFilterType::CirclesListType HoughTransform(ImageType::Pointer imag
 	typedef itk::CastImageFilter< ImageType, AccumulatorImageType >
 		CastingFilterType;
 	CastingFilterType::Pointer caster = CastingFilterType::New();
-	//std::cout << "Applying gradient magnitude filter" << std::endl;
-	typedef itk::GradientMagnitudeImageFilter<AccumulatorImageType,
-		AccumulatorImageType > GradientFilterType;
-	GradientFilterType::Pointer gradFilter = GradientFilterType::New();
 	caster->SetInput(image);
+
+	typedef itk::GradientMagnitudeImageFilter<AccumulatorImageType, AccumulatorImageType > GradientFilterType;
+	GradientFilterType::Pointer gradFilter = GradientFilterType::New();
+	
 	gradFilter->SetInput(caster->GetOutput());
 	gradFilter->Update();
 
@@ -87,7 +92,7 @@ HoughTransformFilterType::CirclesListType HoughTransform(ImageType::Pointer imag
 	houghFilter->SetInput(gradFilter->GetOutput());
 	houghFilter->SetNumberOfCircles(numberOfCircles);
 	houghFilter->SetMinimumRadius(radiusMin);
-	houghFilter->SetRadius(radiusAvg);
+	//houghFilter->SetRadius(radiusAvg);
 	houghFilter->SetMaximumRadius(radiusMax);
 	houghFilter->SetSweepAngle(sweepAngle);
 	houghFilter->SetSigmaGradient(sigmaGradient);
@@ -115,6 +120,7 @@ int main()
 		break;
 	case 'P':
 		directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp13_Gsp13\\Head_Routine - 20090915\\T1_SE_TRA_PAT2_4";
+		directory ="C:\\POMwJO\\ITK-projekt\\Images\\Input\\Gsp8_Gsp8\\Head_Routine - 20090212\\T2_TSE_TRA_FIL_3";
 		break;
 	case 'S':
 		directory = "C:\\POMwJO\\ITK-projekt\\Images\\Input\\mozg md\\Head_Neck_Standard - 1\\t1_tse_sag_2";
@@ -125,7 +131,6 @@ int main()
 	namesGenerator->SetDirectory(directory);
 
 	itk::SerieUIDContainer series = namesGenerator->GetSeriesUIDs();
-	std::cout << "itk = [  ";
 	for (size_t i = 0; i < series.size(); i++)
 	{
 		itk::FilenamesContainer filenames = namesGenerator->GetFileNames(series[i]);
@@ -176,7 +181,7 @@ int main()
 			radiusMax = radiusMax_temp / spacing ;
 			radiusAvg = radiusAvg_temp / spacing;
 			circles[k] = HoughTransform(localImage);
-			//std::cout << "		Found " <<circles[k].size()<<" circles. "<< std::endl;
+			
 		}
 	
 		//std::cout << "- - - - - - - - - - - - - - \n";
@@ -184,9 +189,10 @@ int main()
 		//std::cout << "- - - - - - - - - - - - - - \n";
 		typedef HoughTransformFilterType::CirclesListType CirclesListType;
 		savedCircles = circles;
-		//finalCircles = savedCircles;
-		for (size_t j = 0; j < circles.size() ; j++)
-		{
+	//	finalCircles = savedCircles;
+		std::cout << "itk = [  ";
+	for (size_t j = 0; j < circles.size() ; j++)
+	{
 			CirclesListType::const_iterator itCircles = circles[j].begin();
 			while (itCircles != circles[j].end())
 			{
@@ -203,13 +209,13 @@ int main()
 					warunek = (*itCircles)->GetObjectToParentTransform()->GetOffset()[0] < localImage->GetLargestPossibleRegion().GetSize()[0] / 2;
 					break;
 				}
-				if(warunek)
+				if (warunek)
 				{
 					if (j >= 2 && j < circles.size() - 2)
 					{
 						//pêtla po preprevious
 						bool preprevious = false;
-						size_t prog = 10;
+						size_t prog = 7.5 / spacing;
 						CirclesListType::const_iterator itCirclesPrePrevious = circles[j - 2].begin();
 						while (itCirclesPrePrevious != circles[j - 2].end())
 						{
@@ -265,13 +271,17 @@ int main()
 							itCirclesPostNext++;
 						}
 						//if to albo to true zostaje 
-						if (previous && next)
+						if ((previous || next) && (preprevious || postnext))
 						{
 							if (previous && preprevious)
 							{
 								//std::cout << "saved" << std::endl;
 							}
 							else if (next && postnext)
+							{
+								//std::cout << "saved" << std::endl;
+							}
+							else if (next && previous)
 							{
 								//std::cout << "saved" << std::endl;
 							}
@@ -296,9 +306,10 @@ int main()
 				
 				itCircles++;
 			}
-
+			
 			finalCircles[j] = savedCircles[j];
 		}
+
 
 
 		for (size_t k = 0; k < filenames.size(); k++)
